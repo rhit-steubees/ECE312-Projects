@@ -70,19 +70,30 @@ void handle_communication (int sock)
     int n;
     char buffer[256];
         
-    memset(buffer, 0, 256); //clear buffer
-    n = read(sock,buffer,255); //read message from socket
-    if (n < 0) error("ERROR reading from socket");
+    while(1){
+        // Reads client message
+        memset(buffer, 0, 256); //clear buffer
+        n = read(sock,buffer,255); //read message from socket
+        if (n < 0) error("ERROR reading from socket");
 
-    printf("Here is the message: %s\n",buffer);  // print message
-    n = write(sock,"I got your message",18);     // acknowledge
-    if (n < 0) error("ERROR writing to socket");
+        // Print message and acknowledge
+        printf("Here is the message: %s\n",buffer);  // print message
+        n = write(sock,"I got your message",18);     // acknowledge
+        if (n < 0) error("ERROR writing to socket");
 
-    printf("Please enter the message: ");
-    memset(buffer, 0, 256); //clear buffer
-    fgets(buffer,255,stdin); // gather input
-    n = write(sock,buffer,strlen(buffer));
-    if (n < 0) 
-        error("ERROR writing to socket");
+        // Send return message
+        printf("Please enter the message: ");
+        memset(buffer, 0, 256); //clear buffer
+        fgets(buffer,255,stdin); // gather input
+        n = write(sock,buffer,strlen(buffer));
+        if (n < 0) error("ERROR writing to socket");
+
+        // Read acknowledgement
+        memset(buffer, 0, 256); //clear buffer
+        n = read(sock,buffer,255); //read message from socket
+        if (n < 0) error("ERROR reading from socket");
+
+    }
+
 
 }

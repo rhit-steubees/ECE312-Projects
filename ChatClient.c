@@ -40,31 +40,56 @@
           (char *)&serv_addr.sin_addr.s_addr,
           server->h_length);
      serv_addr.sin_port = htons(portno);
-     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) 
-         error("ERROR connecting");
-     printf("Please enter the message: ");
-     bzero(buffer,256);
-     fgets(buffer,255,stdin);
-     n = write(sockfd,buffer,strlen(buffer));
-     if (n < 0) 
-          error("ERROR writing to socket");
+     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) error("ERROR connecting");
 
-     //Read acknowlegement
-     bzero(buffer,256); // clear buffer
-     n = read(sockfd,buffer,255);
-     if (n < 0) 
-          error("ERROR reading from socket");
-     printf("%s\n",buffer);
+    while(1){
+
+        // Send message
+        printf("Please enter the message: ");
+        memset(buffer, 0, 256); //clear buffer
+        fgets(buffer,255,stdin); // gather input
+        n = write(sockfd,buffer,strlen(buffer));
+        if (n < 0) error("ERROR writing to socket");
+
+        // Read acknowledgement
+        memset(buffer, 0, 256); //clear buffer
+        n = read(sockfd,buffer,255); //read message from socket
+        if (n < 0) error("ERROR reading from socket");
+
+        // Reads server return message
+        memset(buffer, 0, 256); //clear buffer
+        n = read(sockfd,buffer,255); //read message from socket
+        if (n < 0) error("ERROR reading from socket");
+
+        // Print message and acknowledge
+        printf("Here is the message: %s\n",buffer);  // print message
+        n = write(sockfd,"I got your message",18);     // acknowledge
+        if (n < 0) error("ERROR writing to socket");
 
 
-     //Read return message
-     bzero(buffer,256); // clear buffer
-     n = read(sockfd,buffer,255);
-     if (n < 0) 
-          error("ERROR reading from socket");
-     printf("%s\n",buffer);
 
-     n = write(sockfd,"I got your message",18);
+    }   
+    //  printf("Please enter the message: ");
+    //  bzero(buffer,256);
+    //  fgets(buffer,255,stdin);
+    //  n = write(sockfd,buffer,strlen(buffer));
+    //  if (n < 0) 
+    //       error("ERROR writing to socket");
+
+    //  //Read acknowlegement
+    //  bzero(buffer,256); // clear buffer
+    //  n = read(sockfd,buffer,255);
+    //  if (n < 0) error("ERROR reading from socket");
+    //  printf("%s\n",buffer);
+
+
+    //  //Read return message
+    //  bzero(buffer,256); // clear buffer
+    //  n = read(sockfd,buffer,255);
+    //  if (n < 0) error("ERROR reading from socket");
+    //  printf("%s\n",buffer);
+
+    //  n = write(sockfd,"I got your message",18);
      
      return 0;
    }
