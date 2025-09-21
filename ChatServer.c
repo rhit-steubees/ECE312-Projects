@@ -69,6 +69,7 @@ void handle_communication (int sock)
 {
     int n;
     char buffer[256];
+    char* quit = "quit";
         
     while(1){
         // Reads client message and prints it
@@ -76,10 +77,11 @@ void handle_communication (int sock)
         n = read(sock,buffer,255); //read message from socket
         if (n < 0) error("ERROR reading from socket");
         printf("Here is the message: %s\n",buffer);  // print message
+        printf("%d", strcmp(quit, buffer));
 
-        // Sends acknowledgement
-        n = write(sock,"I got your message",18);     // acknowledge
-        if (n < 0) error("ERROR writing to socket");
+        // // Sends acknowledgement
+        // n = write(sock,"I got your message",18);     // acknowledge
+        // if (n < 0) error("ERROR writing to socket");
 
         // Send return message
         printf("Please enter the message: ");
@@ -88,11 +90,11 @@ void handle_communication (int sock)
         n = write(sock,buffer,strlen(buffer));
         if (n < 0) error("ERROR writing to socket");
 
-        // Read acknowledgement
-        memset(buffer, 0, 256); //clear buffer
-        n = read(sock,buffer,255); //read message from socket
-        if (n < 0) error("ERROR reading from socket");
-        printf("%s\n",buffer);
+        // // Read acknowledgement
+        // memset(buffer, 0, 256); //clear buffer
+        // n = read(sock,buffer,255); //read message from socket
+        // if (n < 0) error("ERROR reading from socket");
+        // printf("%s\n",buffer);
 
     }
 
