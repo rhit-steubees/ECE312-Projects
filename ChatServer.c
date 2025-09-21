@@ -75,8 +75,8 @@ int main(int argc, char *argv[])
  *****************************************/
 void handle_communication (int sock, char* cli_ip)
 {
-    int n;
-    char buffer[256];
+    int n, pid;
+    char read_buffer[256], write_buffer[256];
     char quit[256] = "quit\n";
     char cli_username[256];
 
@@ -87,32 +87,45 @@ void handle_communication (int sock, char* cli_ip)
     if (n < 0) error("ERROR reading from socket");   
 
     printf("Connection established with %s (%s)\n", cli_ip, cli_username);
-
-
-    while(1){
-        // Reads client message and prints it
-        memset(buffer, 0, 256); //clear buffer
-        n = read(sock,buffer,255); //read message from socket
-        if (n < 0) error("ERROR reading from socket");
-        if(strcmp(quit, buffer)==0){
-            //Termination procedure
-            printf("Exiting communication.");
-            exit(0);
+    pid = fork() // Child will read, parent will write
+    if (pid < 0) error("ERROR on fork");
+    if (pid==0){ // if child, read messages from client
+        while(1){
+            // Reads client message and prints it
+            memset(read_buffer, 0, 256); //clear buffer
+            n = read(sock,read_buffer,255); //read message from socket
+            if (n < 0) error("ERROR reading from socket");
+            if(strcmp(quit, read_buffer)==0){
+                //Termination procedure
+                write_buffer = "quit\n";
+                printf("Exiting communication.");
+                exit(0);
+            }
+            printf("<%s>  %s\n", cli_username, read_buffer);  // print message
         }
-        printf("<%s>  %s\n", cli_username, buffer);  // print message
+    }
+    else{   // if parent, write messages to client
+        while(1){
+            // Send return message
+            printf("<%s>", username);
+            memset(write_buffer, 0, 256); //clear buffer
+            fgets(write_buffer,255,stdin); // gather input        
+            n = write(sock,write_buffer,strlen(write_buffer));
+            if (n < 0) error("ERROR writing to socket");
+            if(strcmp(quit, write_buffer)==0){
+                //Termination procedure
+                read_buffer = "quit\n";
+                printf("Exiting communication.");
+                exit(0);
+            }
+        }
+    }
+    while(1){
+        
+        
     
 
-        // Send return message
-        printf("<%s>", username);
-        memset(buffer, 0, 256); //clear buffer
-        fgets(buffer,255,stdin); // gather input        
-        n = write(sock,buffer,strlen(buffer));
-        if (n < 0) error("ERROR writing to socket");
-        if(strcmp(quit, buffer)==0){
-            //Termination procedure
-            printf("Exiting communication.");
-            exit(0);
-        }
+        
 
     }
 
