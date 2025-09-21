@@ -12,6 +12,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+char username[256];
+
 void handle_communication(int); /* function prototype */
 
 void error(char *msg)
@@ -22,8 +24,9 @@ void error(char *msg)
 
 int main(int argc, char *argv[])
 {
-    int sockfd, newsockfd, portno, clilen, pid;
+    int sockfd, newsockfd, portno, clilen, pid, n;
     struct sockaddr_in serv_addr, cli_addr;
+    char cli_ip[256];
 
     if (argc < 2) {
         fprintf(stderr,"ERROR, no port provided\n");
@@ -38,13 +41,16 @@ int main(int argc, char *argv[])
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) error("ERROR on binding");
-    printf("Waiting for connection...\n");
+    printf("Provide username: ");
+    fgets(username,255,stdin); // gather username input        
+    printf("\nWaiting for connection...\n");
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
 //     while (1) {
 
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        printf("Connection established with %s\n", inet_ntoa(cli_addr.sin_addr));
+        cli_ip = inet_ntoa(cli_addr.sin_addr)
+        
         //  if (newsockfd < 0) 
         //      error("ERROR on accept");
         //  pid = fork();
@@ -52,7 +58,7 @@ int main(int argc, char *argv[])
         //      error("ERROR on fork");
         //  if (pid == 0)  {
         //      close(sockfd);
-             handle_communication(newsockfd);
+             handle_communication(newsockfd, cli_ip);
              close(newsockfd);
              exit(0);
    //      }
@@ -66,13 +72,22 @@ int main(int argc, char *argv[])
  for each connection.  It handles all communication
  once a connnection has been established.
  *****************************************/
-void handle_communication (int sock)
+void handle_communication (int sock, char cli_ip[256])
 {
     int n;
     char buffer[256];
     char quit[256] = "quit\n";
+    char cli_username[256];
 
-        
+    n = write(sock,username,strlen(username)); // send username to client
+    if (n < 0) error("ERROR writing to socket"); 
+
+    n = read(sock,cli_username,255); //read client username
+    if (n < 0) error("ERROR reading from socket");   
+
+    printf("Connection established with %s (%s)\n", cli_ip, cli_username);
+
+
     while(1){
         // Reads client message and prints it
         memset(buffer, 0, 256); //clear buffer
@@ -83,11 +98,11 @@ void handle_communication (int sock)
             printf("Exiting communication.");
             exit(0);
         }
-        printf("Here is the message: %s\n",buffer);  // print message
+        printf("<%s> %s\n", cli_username, buffer);  // print message
     
 
         // Send return message
-        printf("Please enter the message: ");
+        printf("<%s>", username);
         memset(buffer, 0, 256); //clear buffer
         fgets(buffer,255,stdin); // gather input        
         n = write(sock,buffer,strlen(buffer));
