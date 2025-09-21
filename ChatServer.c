@@ -99,7 +99,7 @@ void handle_communication (int sock, char* cli_ip)
             printf("Exiting communication.");
             exit(0);
         }
-        printf("<%s> %s\n", cli_username, buffer);  // print message
+        printf("<%s>  %s\n", cli_username, buffer);  // print message
     
 
         // Send return message

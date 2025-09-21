@@ -85,7 +85,7 @@
             printf("Exiting communication.");
             exit(0);
         }
-        printf("<%s> %s\n",serv_username, buffer);  // print message
+        printf("<%s>  %s\n",serv_username, buffer);  // print message
 
         // // Send acknowledgement
         // n = write(sockfd,"I got your message",18);     // acknowledge
