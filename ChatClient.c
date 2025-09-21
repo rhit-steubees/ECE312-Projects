@@ -50,6 +50,11 @@
         fgets(buffer,255,stdin); // gather input
         n = write(sockfd,buffer,strlen(buffer));
         if (n < 0) error("ERROR writing to socket");
+        if(strcmp(quit, buffer)==0){
+            //Termination procedure
+            print("Exiting communication.");
+            exit(0);
+        }
 
         // // Read acknowledgement
         // memset(buffer, 0, 256); //clear buffer
@@ -61,6 +66,11 @@
         memset(buffer, 0, 256); //clear buffer
         n = read(sockfd,buffer,255); //read message from socket
         if (n < 0) error("ERROR reading from socket");
+        if(strcmp(quit, buffer)==0){
+            //Termination procedure
+            print("Exiting communication.");
+            exit(0);
+        }
         printf("Here is the message: %s\n",buffer);  // print message
 
         // // Send acknowledgement
