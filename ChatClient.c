@@ -55,14 +55,15 @@
         memset(buffer, 0, 256); //clear buffer
         n = read(sockfd,buffer,255); //read message from socket
         if (n < 0) error("ERROR reading from socket");
+        printf("%s\n",buffer);
 
-        // Reads server return message
+        // Reads server return message and prints it
         memset(buffer, 0, 256); //clear buffer
         n = read(sockfd,buffer,255); //read message from socket
         if (n < 0) error("ERROR reading from socket");
-
-        // Print message and acknowledge
         printf("Here is the message: %s\n",buffer);  // print message
+
+        // Send acknowledgement
         n = write(sockfd,"I got your message",18);     // acknowledge
         if (n < 0) error("ERROR writing to socket");
 
