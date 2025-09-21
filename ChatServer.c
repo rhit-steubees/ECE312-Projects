@@ -87,7 +87,7 @@ void handle_communication (int sock, char* cli_ip)
     if (n < 0) error("ERROR reading from socket");   
 
     printf("Connection established with %s (%s)\n", cli_ip, cli_username);
-    pid = fork() // Child will read, parent will write
+    pid = fork(); // Child will read, parent will write
     if (pid < 0) error("ERROR on fork");
     if (pid==0){ // if child, read messages from client
         while(1){
@@ -97,7 +97,7 @@ void handle_communication (int sock, char* cli_ip)
             if (n < 0) error("ERROR reading from socket");
             if(strcmp(quit, read_buffer)==0){
                 //Termination procedure
-                write_buffer = "quit\n";
+
                 printf("Exiting communication.");
                 exit(0);
             }
@@ -114,20 +114,11 @@ void handle_communication (int sock, char* cli_ip)
             if (n < 0) error("ERROR writing to socket");
             if(strcmp(quit, write_buffer)==0){
                 //Termination procedure
-                read_buffer = "quit\n";
+
                 printf("Exiting communication.");
                 exit(0);
             }
         }
     }
-    while(1){
-        
-        
-    
-
-        
-
-    }
-
 
 }
