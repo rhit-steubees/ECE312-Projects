@@ -4,6 +4,7 @@
   #include <sys/types.h> 
   #include <sys/socket.h>
   #include <netinet/in.h>
+  #include <arpa/inet.h>
 
   void error(char *msg)
   {
@@ -24,7 +25,7 @@
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd < 0) 
            error("ERROR opening socket");
-           
+
         // bzero((char *) &serv_addr, sizeof(serv_addr));
         memset(&serv_addr, 0, sizeof(serv_addr)); // clear server address
 
@@ -43,9 +44,25 @@
         bzero(buffer,256);
         n = read(newsockfd,buffer,255);
         if (n < 0) error("ERROR reading from socket");
+
         printf("Here is the message: %s\n",buffer);
+        printf("Client IP: %s\n", inet_ntoa(cli_addr.sin_addr));
+        printf("Server IP: %s\n", inet_ntoa(serv_addr.sin_addr));
+
         n = write(newsockfd,"I got your message",18);
+
         if (n < 0) error("ERROR writing to socket");
+            printf("Please enter the message: ");
+        bzero(buffer,256);
+        fgets(buffer,255,stdin);
+        n = write(newsockfd,buffer,strlen(buffer));
+        if (n < 0) 
+            error("ERROR writing to socket");
+        bzero(buffer,256); // clear buffer
+        n = read(newsockfd,buffer,255);
+        if (n < 0) 
+            error("ERROR reading from socket");
+        printf("%s\n",buffer);
         return 0; 
    }
 
