@@ -52,9 +52,10 @@
         n = write(newsockfd,"I got your message",18);
 
         if (n < 0) error("ERROR writing to socket");
-            printf("Please enter the message: ");
-        bzero(buffer,256);
-        fgets(buffer,255,stdin);
+        
+        printf("Please enter the message: ");
+        bzero(buffer,256); // clear buffer 
+        fgets(buffer,255,stdin); // gather input
         n = write(newsockfd,buffer,strlen(buffer));
         if (n < 0) 
             error("ERROR writing to socket");

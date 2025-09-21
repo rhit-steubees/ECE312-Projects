@@ -41,38 +41,48 @@ int main(int argc, char *argv[])
               error("ERROR on binding");
      listen(sockfd,5);
      clilen = sizeof(cli_addr);
-     while (1) {
+//     while (1) {
          newsockfd = accept(sockfd, 
                (struct sockaddr *) &cli_addr, &clilen);
-         if (newsockfd < 0) 
-             error("ERROR on accept");
-         pid = fork();
-         if (pid < 0)
-             error("ERROR on fork");
-         if (pid == 0)  {
-             close(sockfd);
+        //  if (newsockfd < 0) 
+        //      error("ERROR on accept");
+        //  pid = fork();
+        //  if (pid < 0)
+        //      error("ERROR on fork");
+        //  if (pid == 0)  {
+        //      close(sockfd);
              handle_communication(newsockfd);
+             close(newsockfd);
              exit(0);
-         }
+   //      }
          else close(newsockfd);
-     } /* end of while */
+    //  } /* end of while */
      return 0; /* we never get here */
 }
 
-/******** DOSTUFF() *********************
+/******** handle_communication() *********
  There is a separate instance of this function 
  for each connection.  It handles all communication
  once a connnection has been established.
  *****************************************/
 void handle_communication (int sock)
 {
-   int n;
-   char buffer[256];
-      
-   memset(buffer, 0, 256);
-   n = read(sock,buffer,255);
-   if (n < 0) error("ERROR reading from socket");
-   printf("Here is the message: %s\n",buffer);
-   n = write(sock,"I got your message",18);
-   if (n < 0) error("ERROR writing to socket");
+    int n;
+    char buffer[256];
+        
+    memset(buffer, 0, 256); //clear buffer
+    n = read(sock,buffer,255); //read message from socket
+    if (n < 0) error("ERROR reading from socket");
+
+    printf("Here is the message: %s\n",buffer);  // print message
+    n = write(sock,"I got your message",18);     // acknowledge
+    if (n < 0) error("ERROR writing to socket");
+
+    printf("Please enter the message: ");
+    memset(buffer, 0, 256); //clear buffer
+    fgets(buffer,255,stdin); // gather input
+    n = write(newsockfd,buffer,strlen(buffer));
+    if (n < 0) 
+        error("ERROR writing to socket");
+
 }

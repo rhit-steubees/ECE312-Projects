@@ -34,7 +34,7 @@
 
     //  bzero((char *) &serv_addr, sizeof(serv_addr));
     memset(&serv_addr, 0, sizeof(serv_addr)); // clear server address
-    
+
      serv_addr.sin_family = AF_INET;
      bcopy((char *)server->h_addr, 
           (char *)&serv_addr.sin_addr.s_addr,
@@ -48,11 +48,24 @@
      n = write(sockfd,buffer,strlen(buffer));
      if (n < 0) 
           error("ERROR writing to socket");
-     bzero(buffer,256);
+
+     //Read acknowlegement
+     bzero(buffer,256); // clear buffer
      n = read(sockfd,buffer,255);
      if (n < 0) 
           error("ERROR reading from socket");
      printf("%s\n",buffer);
+
+
+     //Read return message
+     bzero(buffer,256); // clear buffer
+     n = read(sockfd,buffer,255);
+     if (n < 0) 
+          error("ERROR reading from socket");
+     printf("%s\n",buffer);
+
+     n = write(sockfd,"I got your message",18);
+     
      return 0;
    }
 
