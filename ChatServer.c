@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) error("ERROR on binding");
     printf("Provide username: ");
     fgets(username,255,stdin); // gather username input 
-    username[strlen(username)-1] = '\0' //strip the newline from the username       
+    username[strlen(username)-1] = '\0'; //strip the newline from the username       
     printf("\nWaiting for connection...\n");
     listen(sockfd,5);
     clilen = sizeof(cli_addr);

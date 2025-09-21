@@ -45,7 +45,7 @@
 
     printf("Provide username: ");
     fgets(username,255,stdin); // gather username input   
-    username[strlen(username)-1] = '\0' //strip the newline from the username
+    username[strlen(username)-1] = '\0'; //strip the newline from the username
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) error("ERROR connecting");
 
     n = read(sockfd,serv_username,255); //read server username
