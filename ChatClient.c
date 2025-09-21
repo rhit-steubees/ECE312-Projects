@@ -66,11 +66,10 @@
             if (n < 0) error("ERROR reading from socket");
             if(strcmp(quit, read_buffer)==0){
                 //Termination procedure
-\
                 printf("Exiting communication.");
                 exit(0);
             }
-            printf("<%s>  %s\n",serv_username, read_buffer);  // print message
+            printf("\n<%s>  %s\n",serv_username, read_buffer);  // print message
         }
     }
     else{   // if parent, write messages to client
@@ -83,7 +82,6 @@
             if (n < 0) error("ERROR writing to socket");
             if(strcmp(quit, write_buffer)==0){
                 //Termination procedure
-\
                 printf("Exiting communication.");
                 exit(0);
             }
