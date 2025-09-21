@@ -11,7 +11,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-void dostuff(int); /* function prototype */
+void handle_communication(int); /* function prototype */
+
 void error(char *msg)
 {
     perror(msg);
@@ -30,7 +31,7 @@ int main(int argc, char *argv[])
      sockfd = socket(AF_INET, SOCK_STREAM, 0);
      if (sockfd < 0) 
         error("ERROR opening socket");
-     memset(&serv_addr, 0, sizeof(serv_addr));
+     memset(&serv_addr, 0, sizeof(serv_addr)); // clear server address
      portno = atoi(argv[1]);
      serv_addr.sin_family = AF_INET;
      serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
              error("ERROR on fork");
          if (pid == 0)  {
              close(sockfd);
-             dostuff(newsockfd);
+             handle_communication(newsockfd);
              exit(0);
          }
          else close(newsockfd);
@@ -63,7 +64,7 @@ int main(int argc, char *argv[])
  for each connection.  It handles all communication
  once a connnection has been established.
  *****************************************/
-void dostuff (int sock)
+void handle_communication (int sock)
 {
    int n;
    char buffer[256];

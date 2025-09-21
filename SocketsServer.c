@@ -24,7 +24,10 @@
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd < 0) 
            error("ERROR opening socket");
-        bzero((char *) &serv_addr, sizeof(serv_addr));
+           
+        // bzero((char *) &serv_addr, sizeof(serv_addr));
+        memset(&serv_addr, 0, sizeof(serv_addr)); // clear server address
+
         portno = atoi(argv[1]);
         serv_addr.sin_family = AF_INET;
         serv_addr.sin_port = htons(portno);
