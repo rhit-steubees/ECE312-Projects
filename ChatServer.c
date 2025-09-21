@@ -79,7 +79,7 @@ void handle_communication (int sock)
         if (n < 0) error("ERROR reading from socket");
         if(strcmp(quit, buffer)==0){
             //Termination procedure
-            print("Exiting communication.");
+            printf("Exiting communication.");
             exit(0);
         }
         printf("Here is the message: %s\n",buffer);  // print message
@@ -97,7 +97,7 @@ void handle_communication (int sock)
         if (n < 0) error("ERROR writing to socket");
         if(strcmp(quit, buffer)==0){
             //Termination procedure
-            print("Exiting communication.");
+            printf("Exiting communication.");
             exit(0);
         }
 
