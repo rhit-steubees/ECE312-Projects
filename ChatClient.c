@@ -14,7 +14,7 @@
 
    int main(int argc, char *argv[])
    {
-    
+
     int sockfd, portno, n;
     struct sockaddr_in serv_addr;
     struct hostent *server;
@@ -38,12 +38,11 @@
     //  bzero((char *) &serv_addr, sizeof(serv_addr));
     memset(&serv_addr, 0, sizeof(serv_addr)); // clear server address
 
-     serv_addr.sin_family = AF_INET;
-     bcopy((char *)server->h_addr, 
-          (char *)&serv_addr.sin_addr.s_addr,
-          server->h_length);
-     serv_addr.sin_port = htons(portno);
-     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) error("ERROR connecting");
+    serv_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr,server->h_length);
+    serv_addr.sin_port = htons(portno);
+    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) error("ERROR connecting");
+    printf("Connection established with %s\n", inet_ntoa(serv_addr.sin_addr));
 
     while(1){
 
