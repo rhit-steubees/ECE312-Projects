@@ -14,7 +14,7 @@
 
 char username[256];
 
-void handle_communication(int); /* function prototype */
+void handle_communication(int, char*); /* function prototype */
 
 void error(char *msg)
 {
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 {
     int sockfd, newsockfd, portno, clilen, pid, n;
     struct sockaddr_in serv_addr, cli_addr;
-    char cli_ip[256];
+    char* cli_ip;
 
     if (argc < 2) {
         fprintf(stderr,"ERROR, no port provided\n");
@@ -42,14 +42,15 @@ int main(int argc, char *argv[])
     serv_addr.sin_port = htons(portno);
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) error("ERROR on binding");
     printf("Provide username: ");
-    fgets(username,255,stdin); // gather username input        
+    fgets(username,255,stdin); // gather username input 
+    username[strlen(username)-1] = '\0' //strip the newline from the username       
     printf("\nWaiting for connection...\n");
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
 //     while (1) {
 
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        cli_ip = inet_ntoa(cli_addr.sin_addr)
+        cli_ip = inet_ntoa(cli_addr.sin_addr);
         
         //  if (newsockfd < 0) 
         //      error("ERROR on accept");
@@ -72,7 +73,7 @@ int main(int argc, char *argv[])
  for each connection.  It handles all communication
  once a connnection has been established.
  *****************************************/
-void handle_communication (int sock, char cli_ip[256])
+void handle_communication (int sock, char* cli_ip)
 {
     int n;
     char buffer[256];

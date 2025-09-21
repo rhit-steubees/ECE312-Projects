@@ -45,7 +45,7 @@
 
     printf("Provide username: ");
     fgets(username,255,stdin); // gather username input   
-
+    username[strlen(username)-1] = '\0' //strip the newline from the username
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) error("ERROR connecting");
 
     n = read(sockfd,serv_username,255); //read server username
@@ -54,7 +54,7 @@
     n = write(sockfd,username,strlen(username)); // send username to server
     if (n < 0) error("ERROR writing to socket"); 
    
-    printf("\nConnection established with %s\n (%s)", inet_ntoa(serv_addr.sin_addr), serv_username);
+    printf("\nConnection established with %s (%s)\n", inet_ntoa(serv_addr.sin_addr), serv_username);
 
     while(1){
 
