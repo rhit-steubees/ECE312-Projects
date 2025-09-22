@@ -98,7 +98,8 @@ void handle_communication (int sock, char* cli_ip)
             if (n < 0) error("ERROR reading from socket");
             if(strcmp(quit, read_buffer)==0){
                 //Termination procedure
-                
+                n = write(sock,quit,strlen(quit));
+                if (n < 0) error("ERROR writing to socket");
                 kill(pid); // Kill child process
                 printf("Exiting communication.");
                 exit(0);
@@ -118,12 +119,6 @@ void handle_communication (int sock, char* cli_ip)
             fgets(write_buffer,255,stdin); // gather input        
             n = write(sock,write_buffer,strlen(write_buffer));
             if (n < 0) error("ERROR writing to socket");
-            if(strcmp(quit, write_buffer)==0){
-                //Termination procedure
-
-                printf("Exiting communication.");
-                exit(0);
-            }
         }
     }
 

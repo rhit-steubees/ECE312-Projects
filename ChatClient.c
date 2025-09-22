@@ -56,9 +56,9 @@
    
     printf("\nConnection established with %s (%s)\n", inet_ntoa(serv_addr.sin_addr), serv_username);
 
-    pid = fork(); // Child will read, parent will write
+    pid = fork(); // Parent will read, child will write
     if (pid < 0) error("ERROR on fork");
-    if (pid==0){ // if child, read messages from client
+    if (pid!=0){ // if parent, read messages from client
         while(1){
             // Reads server return message and prints it
             memset(read_buffer, 0, 256); //clear buffer
@@ -66,6 +66,9 @@
             if (n < 0) error("ERROR reading from socket");
             if(strcmp(quit, read_buffer)==0){
                 //Termination procedure
+                n = write(sockfd,quit,strlen(quit));
+                if (n < 0) error("ERROR writing to socket");
+                kill(pid);
                 printf("Exiting communication.");
                 exit(0);
             }
@@ -75,7 +78,7 @@
             fflush(stdout);
         }
     }
-    else{   // if parent, write messages to client
+    else{   // if child, write messages to client
         while(1){
             // Send message
             printf("<%s> ", username);
@@ -84,11 +87,6 @@
             fgets(write_buffer,255,stdin); // gather input
             n = write(sockfd,write_buffer,strlen(write_buffer));
             if (n < 0) error("ERROR writing to socket");
-            if(strcmp(quit, write_buffer)==0){
-                //Termination procedure
-                printf("Exiting communication.");
-                exit(0);
-            }
         }
     }
     
