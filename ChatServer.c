@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
     fgets(username,255,stdin); // gather username input 
     username[strlen(username)-1] = '\0'; //strip the newline from the username       
     printf("\nWaiting for connection...\n");
+    fflush(stdout);
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
@@ -65,7 +66,7 @@ void handle_communication (int sock, char* cli_ip)
 {
     int n, pid;
     char read_buffer[256], write_buffer[256];
-    char quit[256] = "quit\n";
+    char quit[256] = "quit\n";  // special "quit" message
     char cli_username[256];
 
     n = write(sock,username,strlen(username)); // send username to client
@@ -86,11 +87,11 @@ void handle_communication (int sock, char* cli_ip)
             if (n < 0) error("ERROR reading from socket");
             if(strcmp(quit, read_buffer)==0){
                 //Termination procedure
-                n = write(sock,quit,strlen(quit));
+                n = write(sock,quit,strlen(quit)); // send message to client to quit
                 if (n < 0) error("ERROR writing to socket");
                 kill(pid, SIGKILL); // Kill child process
                 printf("Exiting communication.");
-                exit(0);
+                exit(0);    // Exit
             }
             printf("\n<%s> %s", cli_username, read_buffer);  // print message
             fflush(stdout);
