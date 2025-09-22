@@ -87,9 +87,10 @@ void handle_communication (int sock, char* cli_ip)
     if (n < 0) error("ERROR reading from socket");   
 
     printf("Connection established with %s (%s)\n", cli_ip, cli_username);
-    pid = fork(); // Child will read, parent will write
+    fflush(stdout);
+    pid = fork(); // Parent will read, child will write
     if (pid < 0) error("ERROR on fork");
-    if (pid==0){ // if child, read messages from client
+    if (pid!=0){ // if parent, read messages from client
         while(1){
             // Reads client message and prints it
             memset(read_buffer, 0, 256); //clear buffer
@@ -97,17 +98,22 @@ void handle_communication (int sock, char* cli_ip)
             if (n < 0) error("ERROR reading from socket");
             if(strcmp(quit, read_buffer)==0){
                 //Termination procedure
-
+                
+                kill(pid); // Kill child process
                 printf("Exiting communication.");
                 exit(0);
             }
-            printf("<%s> %s\n<%s> ", cli_username, read_buffer, username);  // print message
+            printf("\n<%s> %s", cli_username, read_buffer);  // print message
+            fflush(stdout);
+            printf("<%s> ", username);
+            fflush(stdout);
         }
     }
-    else{   // if parent, write messages to client
+    else{   // if child, write messages to client
         while(1){
             // Send return message
             printf("<%s> ", username);
+            fflush(stdout);
             memset(write_buffer, 0, 256); //clear buffer
             fgets(write_buffer,255,stdin); // gather input        
             n = write(sock,write_buffer,strlen(write_buffer));

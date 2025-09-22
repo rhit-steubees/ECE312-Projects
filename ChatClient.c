@@ -69,13 +69,17 @@
                 printf("Exiting communication.");
                 exit(0);
             }
-            printf("\n<%s> %s\n<%s> ",serv_username, read_buffer, username);  // print message
+            printf("\n<%s> %s",serv_username, read_buffer);  // print message
+            fflush(stdout);
+            printf("<%s> ", username);
+            fflush(stdout);
         }
     }
     else{   // if parent, write messages to client
         while(1){
             // Send message
             printf("<%s> ", username);
+            fflush(stdout);
             memset(write_buffer, 0, 256); //clear buffer
             fgets(write_buffer,255,stdin); // gather input
             n = write(sockfd,write_buffer,strlen(write_buffer));
