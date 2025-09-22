@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 char username[256];
 
@@ -100,7 +101,7 @@ void handle_communication (int sock, char* cli_ip)
                 //Termination procedure
                 n = write(sock,quit,strlen(quit));
                 if (n < 0) error("ERROR writing to socket");
-                kill(pid); // Kill child process
+                kill(pid, SIGKILL); // Kill child process
                 printf("Exiting communication.");
                 exit(0);
             }

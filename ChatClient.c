@@ -6,6 +6,8 @@
    #include <netinet/in.h>
    #include <netdb.h> 
    #include <arpa/inet.h>
+   #include <signal.h>
+
 
    void error(char *msg)
    {
@@ -68,7 +70,7 @@
                 //Termination procedure
                 n = write(sockfd,quit,strlen(quit));
                 if (n < 0) error("ERROR writing to socket");
-                kill(pid);
+                kill(pid, SIGKILL);
                 printf("Exiting communication.");
                 exit(0);
             }
