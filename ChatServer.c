@@ -101,13 +101,13 @@ void handle_communication (int sock, char* cli_ip)
                 printf("Exiting communication.");
                 exit(0);
             }
-            printf("<%s>  %s\n", cli_username, read_buffer);  // print message
+            printf("<%s> %s", cli_username, read_buffer);  // print message
         }
     }
     else{   // if parent, write messages to client
         while(1){
             // Send return message
-            printf("<%s>", username);
+            printf("<%s> ", username);
             memset(write_buffer, 0, 256); //clear buffer
             fgets(write_buffer,255,stdin); // gather input        
             n = write(sock,write_buffer,strlen(write_buffer));
