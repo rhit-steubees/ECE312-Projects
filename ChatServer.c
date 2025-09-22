@@ -48,25 +48,12 @@ int main(int argc, char *argv[])
     printf("\nWaiting for connection...\n");
     listen(sockfd,5);
     clilen = sizeof(cli_addr);
-//     while (1) {
-
-        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        cli_ip = inet_ntoa(cli_addr.sin_addr);
-        
-        //  if (newsockfd < 0) 
-        //      error("ERROR on accept");
-        //  pid = fork();
-        //  if (pid < 0)
-        //      error("ERROR on fork");
-        //  if (pid == 0)  {
-        //      close(sockfd);
-             handle_communication(newsockfd, cli_ip);
-             close(newsockfd);
-             exit(0);
-   //      }
-        //  else close(newsockfd);
-    //  } /* end of while */
-     return 0; /* we never get here */
+    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    cli_ip = inet_ntoa(cli_addr.sin_addr);
+    handle_communication(newsockfd, cli_ip);
+    close(newsockfd);
+    exit(0);
+    return 0; 
 }
 
 /******** handle_communication() *********
