@@ -69,7 +69,7 @@
                 printf("Exiting communication.");
                 exit(0);
             }
-            printf("\n<%s> %s",serv_username, read_buffer);  // print message
+            printf("\n<%s> %s\n<%s> ",serv_username, read_buffer, username);  // print message
         }
     }
     else{   // if parent, write messages to client

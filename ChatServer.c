@@ -101,7 +101,7 @@ void handle_communication (int sock, char* cli_ip)
                 printf("Exiting communication.");
                 exit(0);
             }
-            printf("<%s> %s", cli_username, read_buffer);  // print message
+            printf("<%s> %s\n<%s> ", cli_username, read_buffer, username);  // print message
         }
     }
     else{   // if parent, write messages to client
