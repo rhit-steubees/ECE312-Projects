@@ -1,7 +1,5 @@
-/* A simple server in the internet domain using TCP
+/* A simple server for a messaging app in the internet domain using TCP
    The port number is passed as an argument 
-   This version runs forever, forking off a separate 
-   process for each connection
    gcc server2.c 
 */
 #include <stdio.h>
