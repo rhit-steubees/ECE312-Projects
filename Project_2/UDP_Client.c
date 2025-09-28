@@ -6,11 +6,25 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define SERVER "137.112.38.47"
-#define MESSAGE "hello there"
+#define MESSAGE "hello"
 #define PORT 2526
 #define BUFSIZE 1024
+char* RHP_message;
+
+char* construct_RHP_message(int version, int srcPort, int dstPort, char message[]) {
+    size_t len = strlen(message);
+    char *new_message = malloc(len + 1 + 1);
+    strcpy(new_message, message);
+    new_message[len] = '.';
+    new_message[len+1] = '\0';
+    printf("%s\n", message);
+    printf("%s\n", new_message);
+    return new_message;
+}
+
 
 int main() {
     int clientSocket, nBytes;
@@ -48,6 +62,7 @@ int main() {
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
     /* send a message to the server */
+    RHP_message = construct_RHP_message(MESSAGE);
     if (sendto(clientSocket, MESSAGE, strlen(MESSAGE), 0,
             (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
         perror("sendto failed");
@@ -56,9 +71,25 @@ int main() {
 
     /* Receive message from server */
     nBytes = recvfrom(clientSocket, buffer, BUFSIZE, 0, NULL, NULL);
+    // printf("Received %d bytes:\n", nBytes);
+    // char hex_message[nBytes/2];
+    // for(int i = 0, i < nBytes, i++){
+    //     hex_message += buffer[i];
+    // }
+    // printf("Version: ", hex_message[0:1]);
+    // printf("\n");
+    for (int i = 0; i < nBytes; i++) {
+        unsigned char c = buffer[i];
 
-    printf("Received from server: %s\n", buffer);
-
+        printf("%02X ", c);         // hex
+    }
+    printf("   ");
+    for (int i = 0; i < nBytes; i++) {
+        unsigned char c = buffer[i];
+        printf("%c", (c >= 32 && c <= 126) ? c : '.'); // ASCII printable or dot
+    }
+    printf("\n");
+    //printf("Received from server: %c\n", hex_message);
     close(clientSocket);
     return 0;
 }
