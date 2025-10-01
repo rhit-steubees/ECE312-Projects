@@ -14,12 +14,26 @@
 #define BUFSIZE 1024
 char* RHP_message;
 
-char* construct_RHP_message(int version, int srcPort, int dstPort, char message[]) {
-    size_t len = strlen(message);
-    char *new_message = malloc(len + 1 + 1);
-    strcpy(new_message, message);
-    new_message[len] = '.';
-    new_message[len+1] = '\0';
+char* construct_RHP_message(char version, char srcPort, char dstPort, char type, char message[], char checksum) {
+    char length = strlen(message);
+    char *new_message;
+    // Allocate appropriate space
+    if (length%16==0){//even number of octets in message, add a buffer
+        length = length + 8;
+    }
+    new_message = malloc((length+72)/8+1);
+
+    char *message_pointer;
+    message_pointer = new_message;
+    // Copy each input to the new message
+    *message_pointer = version;
+    message_pointer += 1;
+    *message_pointer = srcPort;
+    message_pointer += 2;
+    *message_pointer = dstPort;
+    message_pointer += 2;
+
+
     printf("%s\n", message);
     printf("%s\n", new_message);
     return new_message;
@@ -62,7 +76,7 @@ int main() {
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
     /* send a message to the server */
-    RHP_message = construct_RHP_message(MESSAGE);
+    RHP_message = construct_RHP_message(79, 80, 0, 0, MESSAGE, 0);
     if (sendto(clientSocket, MESSAGE, strlen(MESSAGE), 0,
             (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
         perror("sendto failed");
