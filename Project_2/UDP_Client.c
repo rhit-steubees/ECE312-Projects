@@ -14,14 +14,15 @@
 #define BUFSIZE 1024
 char* RHP_message;
 
-char* construct_RHP_message(char version, char srcPort, char dstPort, char type, char message[], char checksum) {
+char* construct_RHP_message(char version, char srcPort[], char dstPort[], char type, char message[]) {
     char length = strlen(message);
     char *new_message;
     // Allocate appropriate space
+    int buffer_length = 0;
     if (length%16==0){//even number of octets in message, add a buffer
-        length = length + 8;
+        int buffer_length = 1;
     }
-    new_message = malloc((length+72)/8+1);
+    new_message = malloc(9+length+buffer_length+1);
 
     char *message_pointer;
     message_pointer = new_message;
@@ -32,6 +33,16 @@ char* construct_RHP_message(char version, char srcPort, char dstPort, char type,
     message_pointer += 2;
     *message_pointer = dstPort;
     message_pointer += 2;
+    *message_pointer = (length<<4) + type;
+    message_pointer += 2;
+    if(buffer_length==1){
+        *message_pointer = 00000000;
+        message_pointer += 1;
+    }
+    strcpy(message_pointer, message);
+    message_pointer += length; 
+    *message_pointer = compute_checksum(new_message, 9+length+buffer_length);
+    message_pointer += 2;
 
 
     printf("%s\n", message);
@@ -39,6 +50,21 @@ char* construct_RHP_message(char version, char srcPort, char dstPort, char type,
     return new_message;
 }
 
+char[] compute_checksum(char* data, int data_length){
+    char total[3];  // Running sum
+    char cur[3];    // variable for current 2 bytes
+    for(int i = 0; i < data_length/2-1; i++){
+        strncpy(cur, data+i, 2);    // Gather current 2 bytes
+        cur*>>8;
+        total* = total* + cur*;     
+        if(total*>'FFFF'){
+            total = total - '10000' + '1';
+        }
+    }
+
+    // Invert total
+    return 
+}
 
 int main() {
     int clientSocket, nBytes;
@@ -76,7 +102,7 @@ int main() {
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
     /* send a message to the server */
-    RHP_message = construct_RHP_message(79, 80, 0, 0, MESSAGE, 0);
+    RHP_message = construct_RHP_message(12, "7418", "656C", 0, "RHP message received (missing buffer).");
     if (sendto(clientSocket, MESSAGE, strlen(MESSAGE), 0,
             (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
         perror("sendto failed");
