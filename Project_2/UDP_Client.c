@@ -13,10 +13,22 @@
 #define PORT 2526
 #define BUFSIZE 1024
 char* RHP_message;
+char* compute_checksum(char*, int);
+void print_hex_and_text(char*, int);
+void parse_RHP_message(char*, int);
 
-char* construct_RHP_message(char version, char srcPort[], char dstPort[], char type, char message[]) {
+
+char* construct_RHP_message(char version, int srcPort, int dstPort, char type, char message[]) {
     char length = strlen(message);
     char *new_message;
+    char *checksum;
+    char srcPortStr[3];
+    sprintf(srcPortStr, "%c", srcPort);
+    printf("src port: %x, src port str: %x\n", srcPort, srcPortStr);
+    char dstPortStr[3];
+    sprintf(dstPortStr, "%c", dstPort);
+    printf("dst port: %x, dst port str: %x\n", dstPort, dstPortStr);
+
     // Allocate appropriate space
     int buffer_length = 0;
     if (length%16==0){//even number of octets in message, add a buffer
@@ -29,9 +41,11 @@ char* construct_RHP_message(char version, char srcPort[], char dstPort[], char t
     // Copy each input to the new message
     *message_pointer = version;
     message_pointer += 1;
-    *message_pointer = srcPort;
+    // srcPortStr = (char[2]) srcPort;
+    strcpy(message_pointer, srcPortStr);
     message_pointer += 2;
-    *message_pointer = dstPort;
+    // dstPortStr = (char[2]) dstPort;
+    strcpy(message_pointer, dstPortStr);
     message_pointer += 2;
     *message_pointer = (length<<4) + type;
     message_pointer += 2;
@@ -41,7 +55,9 @@ char* construct_RHP_message(char version, char srcPort[], char dstPort[], char t
     }
     strcpy(message_pointer, message);
     message_pointer += length; 
-    *message_pointer = compute_checksum(new_message, 9+length+buffer_length);
+    checksum = compute_checksum(new_message, 9+length+buffer_length);
+    strcpy(message_pointer, checksum);
+    free(checksum);
     message_pointer += 2;
 
 
@@ -50,20 +66,28 @@ char* construct_RHP_message(char version, char srcPort[], char dstPort[], char t
     return new_message;
 }
 
-char[] compute_checksum(char* data, int data_length){
-    char total[3];  // Running sum
-    char cur[3];    // variable for current 2 bytes
-    for(int i = 0; i < data_length/2-1; i++){
-        strncpy(cur, data+i, 2);    // Gather current 2 bytes
-        cur*>>8;
-        total* = total* + cur*;     
-        if(total*>'FFFF'){
-            total = total - '10000' + '1';
+char* compute_checksum(char* data, int data_length){
+    uint32_t total;    // Running sum
+    uint16_t cur;      // variable for current 2 bytes
+    total=0;
+    cur=0;
+    for(int i = 0; i < data_length; i+=2){
+        uint16_t cur = ((uint8_t) data[i]<<8);
+        cur |= (uint8_t) data[i+1];     // Gather current 2 bytes
+        // printf("cur: %x\n", cur);    // debug
+        total += cur;                   // Add current 2 bytes to running total
+        if(total>0x00FFFF){             // handle overflow
+            total = total - 0x10000 + 0x1;
         }
+        // printf("Running total: %x\n", total); // debug
     }
-
-    // Invert total
-    return 
+    total = ~(total)&0xFFFF;                // Invert total and mask          
+    // printf("Final total: %x\n", total);  // debug
+    char *output = malloc(5);               // output as a pointer to characters
+    *output=0;
+    sprintf(output, "%c", total);
+    // printf("Output: %x\n", *output);     // debug
+    return output;
 }
 
 int main() {
@@ -101,35 +125,68 @@ int main() {
     serverAddr.sin_addr.s_addr = inet_addr(SERVER);
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
-    /* send a message to the server */
-    RHP_message = construct_RHP_message(12, "7418", "656C", 0, "RHP message received (missing buffer).");
-    if (sendto(clientSocket, MESSAGE, strlen(MESSAGE), 0,
-            (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
-        perror("sendto failed");
-        return 0;
-    }
+    
+    RHP_message = construct_RHP_message(12, 29720, 25964, 0, "RHP message received (missing buffer).\0");
+    print_hex_and_text(RHP_message, strlen(RHP_message));   // debug
 
-    /* Receive message from server */
-    nBytes = recvfrom(clientSocket, buffer, BUFSIZE, 0, NULL, NULL);
-    // printf("Received %d bytes:\n", nBytes);
-    // char hex_message[nBytes/2];
-    // for(int i = 0, i < nBytes, i++){
-    //     hex_message += buffer[i];
-    // }
-    // printf("Version: ", hex_message[0:1]);
-    // printf("\n");
+    for(int i = 0; i<10; i++){
+        /* send a message to the server */
+        if (sendto(clientSocket, MESSAGE, strlen(MESSAGE), 0, (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
+            perror("sendto failed");
+            return 0;
+        }
+        /* Receive message from server */
+        nBytes = recvfrom(clientSocket, buffer, BUFSIZE, 0, NULL, NULL);
+        if(*compute_checksum(buffer, nBytes)==0x0000){
+            printf("Checksum passed.\n");
+            break;
+        }
+        else{
+            printf("Checksum failed, resending message...\n");
+        }
+    }
+    free(RHP_message);
+    print_hex_and_text(buffer, nBytes); // debug
+    parse_RHP_message(buffer, nBytes);
+    //printf("Received from server: %c\n", hex_message);
+    close(clientSocket);
+    return 0;
+}
+
+void print_hex_and_text(char* buffer, int nBytes){
+    printf("This is the hex: ");
     for (int i = 0; i < nBytes; i++) {
         unsigned char c = buffer[i];
-
         printf("%02X ", c);         // hex
     }
-    printf("   ");
+    printf("   \n\n");
+    printf("This is the message: ");
     for (int i = 0; i < nBytes; i++) {
         unsigned char c = buffer[i];
         printf("%c", (c >= 32 && c <= 126) ? c : '.'); // ASCII printable or dot
     }
-    printf("\n");
-    //printf("Received from server: %c\n", hex_message);
-    close(clientSocket);
-    return 0;
+    printf("\n\n");
+}
+
+void parse_RHP_message(char* buffer, int nBytes){
+    int start;
+    printf("Message received: ");
+    int length = (buffer[6]>>4)+(buffer[5]<<4);
+    if (length%16==0){//even number of octets in message, there is a buffer
+        start = 8;
+    }   
+    else{
+        start = 7;
+    }
+    for(int i = start; i<(start+(length/16)); i++) {
+        unsigned char c = buffer[i];
+        printf("%c", c);
+    }
+    printf("\nRHP version: %d\n", buffer[0]);
+    printf("RHP type: %d\n", ((buffer[6]<<4)>>4));
+    // printf("Communication ID: %d\n", buffer[0]);
+    printf("length: %d\n", length);
+    printf("checksum: 0x%02X%02X\n", (unsigned char) buffer[(start+length/16)], (unsigned char) buffer[(start+length/16)+1]);
+    printf("Source Port: %d\n", (buffer[1]<<8)+buffer[2]);
+    printf("Destination Port: %d\n", (buffer[3]<<8)+buffer[4]);
 }
