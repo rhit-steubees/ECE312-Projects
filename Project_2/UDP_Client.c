@@ -13,15 +13,21 @@
 #define PORT 2526
 #define BUFSIZE 1024
 unsigned char* RHP_message;
-unsigned char* compute_checksum(unsigned char*, int);
+uint16_t compute_checksum(unsigned char*, int);
 void print_hex_and_text(unsigned char*, int);
 void parse_RHP_message(unsigned char*, int);
 
 
 unsigned char* construct_RHP_message(char version, int srcPort, int dstPort, char type, char message[]) {
-    unsigned char length = strlen(message);
-    unsigned char *new_message;
-    unsigned char *checksum;
+    unsigned char length = strlen(message)+1;
+    // Allocate appropriate space
+    int buffer_length = 0;
+    if ((length%2)==0){//even number of octets in message, add a buffer
+        buffer_length = 1;
+    }
+    // unsigned char new_message[length+buffer_length+9+1];
+    uint16_t checksum;
+    unsigned char *new_message = malloc(9+length+buffer_length+1);
     // unsigned char srcPortStr[3];
     // sprintf(srcPortStr, "%c", srcPort);
     // printf("src port: %x, src port str: %x\n", srcPort, srcPortStr);
@@ -29,51 +35,63 @@ unsigned char* construct_RHP_message(char version, int srcPort, int dstPort, cha
     // sprintf(dstPortStr, "%c", dstPort);
     // printf("dst port: %x, dst port str: %x\n", dstPort, dstPortStr);
 
-    // Allocate appropriate space
-    int buffer_length = 0;
-    if (length%16==0){//even number of octets in message, add a buffer
-        int buffer_length = 1;
+    new_message[0] = version;
+    new_message[1] = srcPort&0x00FF;
+    new_message[2] = (srcPort&0xFF00)>>8;
+    new_message[3] = dstPort&0x00FF;
+    new_message[4] = (dstPort&0xFF00)>>8;
+    new_message[5] = length&0xFF;
+    new_message[6] = (type<<4) + ((length&0xF00)>>8);
+    int start = 7;
+    if(buffer_length==1){
+        new_message[7] = 0;
+        start++;
     }
-    new_message = malloc(9+length+buffer_length+1);
-
-    char *message_pointer;
-    message_pointer = new_message;
+    int i;
+    for(i = start; i < start + length; i++){
+        new_message[i] = message[i-start];
+    }
+    // new_message[i] = 0x00;
+    // char *message_pointer;
+    // message_pointer = new_message;
     // Copy each input to the new message
-    *message_pointer = version;
-    message_pointer += 1;
+    // *message_pointer = version;
+    // message_pointer += 1;
     // srcPortStr = (char[2]) srcPort;
     // strcpy(message_pointer, srcPortStr);
-    *message_pointer = srcPort&0x00FF;
-    message_pointer += 1;
-    *message_pointer = (srcPort&0xFF00)>>8;
-    message_pointer += 1;
+    // *message_pointer = srcPort&0x00FF;
+    // message_pointer += 1;
+    // *message_pointer = (srcPort&0xFF00)>>8;
+    // message_pointer += 1;
     // dstPortStr = (char[2]) dstPort;
     // strcpy(message_pointer, dstPortStr);
-    *message_pointer = dstPort&0x00FF;
-    message_pointer += 1;
-    *message_pointer = (dstPort&0xFF00)>>8;
-    message_pointer += 1;
+    // *message_pointer = dstPort&0x00FF;
+    // message_pointer += 1;
+    // *message_pointer = (dstPort&0xFF00)>>8;
+    // message_pointer += 1;
+    // *message_pointer = length&0xFF;
+    // message_pointer += 1;
+    // *message_pointer = (type<<4) + ((length&0xF00)>>8);
+    // message_pointer += 1;
+    // if(buffer_length==1){
+    //     *message_pointer = 00000000;
+    //     message_pointer += 1;
+    // }
+    // strcpy(message_pointer, message);
+    // message_pointer += length; 
+    // strcpy(message_pointer, checksum);
 
-    *message_pointer = length&0xFF;
-    message_pointer += 1;
-    *message_pointer = (type<<4) + ((length&0xF00)>>8);
-    message_pointer += 1;
-    if(buffer_length==1){
-        *message_pointer = 00000000;
-        message_pointer += 1;
-    }
-    strcpy(message_pointer, message);
-    message_pointer += length; 
     checksum = compute_checksum(new_message, 9+length+buffer_length);
-    strcpy(message_pointer, checksum);
-    free(checksum);
-    message_pointer += 2;
-    printf("%s\n", message);
-    printf("%s\n", new_message);
+    new_message[i] = (checksum & 0xFF00) >> 8;
+    new_message[i+1] = checksum & 0x00FF;
+    // printf("Checksum: %x %x, %x\n", (checksum & 0xFF00) >> 8, checksum & 0x00FF, checksum);
+    // free(checksum);
+    // printf("%s\n", message);
+    // printf("%s\n", new_message);
     return new_message;
 }
 
-unsigned char* compute_checksum(unsigned char* data, int data_length){
+uint16_t compute_checksum(unsigned char* data, int data_length){
     uint32_t total;    // Running sum
     uint16_t cur;      // variable for current 2 bytes
     total=0;
@@ -90,11 +108,11 @@ unsigned char* compute_checksum(unsigned char* data, int data_length){
     }
     total = ~(total)&0xFFFF;                // Invert total and mask          
     // printf("Final total: %x\n", total);  // debug
-    char *output = malloc(5);               // output as a pointer to characters
-    *output=0;
-    sprintf(output, "%c", total);
+    // unsigned char *output = malloc(5);               // output as a pointer to characters
+    // *output=0;
+    // sprintf(output, "%x", total);
     // printf("Output: %x\n", *output);     // debug
-    return output;
+    return (uint16_t) total;
 }
 
 int main() {
@@ -133,10 +151,11 @@ int main() {
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
     
-    RHP_message = construct_RHP_message(12, 0x1874, 0x6C65, 0, "RHP message received (missing buffer)\0");
+    // RHP_message = construct_RHP_message(12, 0x1874, 0x6C65, 0, "RHP message received (missing buffer)");
+    RHP_message = construct_RHP_message(12, 3044, 0x1874, 0, MESSAGE);
     int payload_length = (RHP_message[5]+((RHP_message[6]&0x0F)<<8));
     int message_length;
-    if(payload_length%16==0){
+    if((payload_length%2)==0){
         message_length = payload_length + 10;
     }
     else{
@@ -145,17 +164,17 @@ int main() {
     
     // printf("Message Length: %d\n", message_length);              // debug
     // printf("%d\n%d\n",RHP_message[5], (RHP_message[6]&0x0F));    // debug
-    print_hex_and_text(RHP_message, message_length);   // debug
-
+    // print_hex_and_text(RHP_message, message_length);   // debug
+    printf("Sending RHP message: %s\n", MESSAGE);
     for(int i = 0; i<10; i++){
         /* send a message to the server */
-        if (sendto(clientSocket, MESSAGE, strlen(MESSAGE), 0, (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
+        if (sendto(clientSocket, RHP_message, message_length, 0, (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
             perror("sendto failed");
             return 0;
         }
         /* Receive message from server */
         nBytes = recvfrom(clientSocket, buffer, BUFSIZE, 0, NULL, NULL);
-        if(*compute_checksum(buffer, nBytes)==0x0000){
+        if(compute_checksum(buffer, nBytes)==0){
             printf("Checksum passed.\n");
             break;
         }
@@ -164,7 +183,7 @@ int main() {
         }
     }
     free(RHP_message);
-    print_hex_and_text(buffer, nBytes); // debug
+    // print_hex_and_text(buffer, nBytes); // debug
     parse_RHP_message(buffer, nBytes);
     //printf("Received from server: %c\n", hex_message);
     close(clientSocket);
@@ -189,22 +208,23 @@ void print_hex_and_text(unsigned char* buffer, int nBytes){
 void parse_RHP_message(unsigned char* buffer, int nBytes){
     int start;
     printf("Message received: ");
-    int length = (buffer[6]>>4)+(buffer[5]<<4);
-    if (length%16==0){//even number of octets in message, there is a buffer
+    int length = ((buffer[6]&0x0F)<<8)+(buffer[5]);
+    if ((length%2)==0){//even number of octets in message, there is a buffer
         start = 8;
     }   
     else{
         start = 7;
     }
-    for(int i = start; i<(start+(length/16)); i++) {
+    int i;
+    for(i = start; i<(start+length); i++) {
         unsigned char c = buffer[i];
         printf("%c", c);
     }
     printf("\nRHP version: %d\n", buffer[0]);
-    printf("RHP type: %d\n", ((buffer[6]<<4)>>4));
+    printf("RHP type: %d\n", ((buffer[6]&0xF0)>>4));
     // printf("Communication ID: %d\n", buffer[0]);
     printf("length: %d\n", length);
-    printf("checksum: 0x%02X%02X\n", (unsigned char) buffer[(start+length/16)], (unsigned char) buffer[(start+length/16)+1]);
-    printf("Source Port: %d\n", (buffer[1]<<8)+buffer[2]);
-    printf("Destination Port: %d\n", (buffer[3]<<8)+buffer[4]);
+    printf("checksum: 0x%02X%02X\n", (unsigned char) buffer[i], (unsigned char) buffer[i+1]);
+    printf("Source Port: 0x%X%X\n", buffer[2], buffer[1]);
+    printf("Destination Port: 0x%X%X\n", buffer[4], buffer[3]);
 }
