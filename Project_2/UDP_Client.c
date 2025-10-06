@@ -12,22 +12,22 @@
 #define MESSAGE "hello"
 #define PORT 2526
 #define BUFSIZE 1024
-char* RHP_message;
-char* compute_checksum(char*, int);
-void print_hex_and_text(char*, int);
-void parse_RHP_message(char*, int);
+unsigned char* RHP_message;
+unsigned char* compute_checksum(unsigned char*, int);
+void print_hex_and_text(unsigned char*, int);
+void parse_RHP_message(unsigned char*, int);
 
 
-char* construct_RHP_message(char version, int srcPort, int dstPort, char type, char message[]) {
-    char length = strlen(message);
-    char *new_message;
-    char *checksum;
-    char srcPortStr[3];
-    sprintf(srcPortStr, "%c", srcPort);
-    printf("src port: %x, src port str: %x\n", srcPort, srcPortStr);
-    char dstPortStr[3];
-    sprintf(dstPortStr, "%c", dstPort);
-    printf("dst port: %x, dst port str: %x\n", dstPort, dstPortStr);
+unsigned char* construct_RHP_message(char version, int srcPort, int dstPort, char type, char message[]) {
+    unsigned char length = strlen(message);
+    unsigned char *new_message;
+    unsigned char *checksum;
+    // unsigned char srcPortStr[3];
+    // sprintf(srcPortStr, "%c", srcPort);
+    // printf("src port: %x, src port str: %x\n", srcPort, srcPortStr);
+    // unsigned char dstPortStr[3];
+    // sprintf(dstPortStr, "%c", dstPort);
+    // printf("dst port: %x, dst port str: %x\n", dstPort, dstPortStr);
 
     // Allocate appropriate space
     int buffer_length = 0;
@@ -42,13 +42,22 @@ char* construct_RHP_message(char version, int srcPort, int dstPort, char type, c
     *message_pointer = version;
     message_pointer += 1;
     // srcPortStr = (char[2]) srcPort;
-    strcpy(message_pointer, srcPortStr);
-    message_pointer += 2;
+    // strcpy(message_pointer, srcPortStr);
+    *message_pointer = srcPort&0x00FF;
+    message_pointer += 1;
+    *message_pointer = (srcPort&0xFF00)>>8;
+    message_pointer += 1;
     // dstPortStr = (char[2]) dstPort;
-    strcpy(message_pointer, dstPortStr);
-    message_pointer += 2;
-    *message_pointer = (length<<4) + type;
-    message_pointer += 2;
+    // strcpy(message_pointer, dstPortStr);
+    *message_pointer = dstPort&0x00FF;
+    message_pointer += 1;
+    *message_pointer = (dstPort&0xFF00)>>8;
+    message_pointer += 1;
+
+    *message_pointer = length&0xFF;
+    message_pointer += 1;
+    *message_pointer = (type<<4) + ((length&0xF00)>>8);
+    message_pointer += 1;
     if(buffer_length==1){
         *message_pointer = 00000000;
         message_pointer += 1;
@@ -59,14 +68,12 @@ char* construct_RHP_message(char version, int srcPort, int dstPort, char type, c
     strcpy(message_pointer, checksum);
     free(checksum);
     message_pointer += 2;
-
-
     printf("%s\n", message);
     printf("%s\n", new_message);
     return new_message;
 }
 
-char* compute_checksum(char* data, int data_length){
+unsigned char* compute_checksum(unsigned char* data, int data_length){
     uint32_t total;    // Running sum
     uint16_t cur;      // variable for current 2 bytes
     total=0;
@@ -92,7 +99,7 @@ char* compute_checksum(char* data, int data_length){
 
 int main() {
     int clientSocket, nBytes;
-    char buffer[BUFSIZE];
+    unsigned char buffer[BUFSIZE];
     struct sockaddr_in clientAddr, serverAddr;
 
     /*Create UDP socket*/
@@ -126,8 +133,11 @@ int main() {
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
     
-    RHP_message = construct_RHP_message(12, 29720, 25964, 0, "RHP message received (missing buffer).\0");
-    print_hex_and_text(RHP_message, strlen(RHP_message));   // debug
+    RHP_message = construct_RHP_message(12, 0x1874, 0x6C65, 0, "RHP message received (missing buffer).\0");
+    // int message_length = (*(RHP_message+5)+(*(RHP_message+6)&0x0F)<<8);
+    // printf("Message Length: %s\n", message_length);
+    // printf("%s\n%s\n",*(RHP_message+5), (*(RHP_message+6)&0x0F)<<8);
+    print_hex_and_text(RHP_message, 100);   // debug
 
     for(int i = 0; i<10; i++){
         /* send a message to the server */
@@ -153,7 +163,7 @@ int main() {
     return 0;
 }
 
-void print_hex_and_text(char* buffer, int nBytes){
+void print_hex_and_text(unsigned char* buffer, int nBytes){
     printf("This is the hex: ");
     for (int i = 0; i < nBytes; i++) {
         unsigned char c = buffer[i];
@@ -168,7 +178,7 @@ void print_hex_and_text(char* buffer, int nBytes){
     printf("\n\n");
 }
 
-void parse_RHP_message(char* buffer, int nBytes){
+void parse_RHP_message(unsigned char* buffer, int nBytes){
     int start;
     printf("Message received: ");
     int length = (buffer[6]>>4)+(buffer[5]<<4);
