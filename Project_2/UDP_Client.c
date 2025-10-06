@@ -133,11 +133,19 @@ int main() {
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
     
-    RHP_message = construct_RHP_message(12, 0x1874, 0x6C65, 0, "RHP message received (missing buffer).\0");
-    // int message_length = (*(RHP_message+5)+(*(RHP_message+6)&0x0F)<<8);
-    // printf("Message Length: %s\n", message_length);
-    // printf("%s\n%s\n",*(RHP_message+5), (*(RHP_message+6)&0x0F)<<8);
-    print_hex_and_text(RHP_message, 100);   // debug
+    RHP_message = construct_RHP_message(12, 0x1874, 0x6C65, 0, "RHP message received (missing buffer)\0");
+    int payload_length = (RHP_message[5]+((RHP_message[6]&0x0F)<<8));
+    int message_length;
+    if(payload_length%16==0){
+        message_length = payload_length + 10;
+    }
+    else{
+        message_length = payload_length + 9;
+    }
+    
+    // printf("Message Length: %d\n", message_length);              // debug
+    // printf("%d\n%d\n",RHP_message[5], (RHP_message[6]&0x0F));    // debug
+    print_hex_and_text(RHP_message, message_length);   // debug
 
     for(int i = 0; i<10; i++){
         /* send a message to the server */
