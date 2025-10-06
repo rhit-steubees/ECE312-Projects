@@ -25,16 +25,9 @@ unsigned char* construct_RHP_message(char version, int srcPort, int dstPort, cha
     if ((length%2)==0){//even number of octets in message, add a buffer
         buffer_length = 1;
     }
-    // unsigned char new_message[length+buffer_length+9+1];
     uint16_t checksum;
     unsigned char *new_message = malloc(9+length+buffer_length+1);
-    // unsigned char srcPortStr[3];
-    // sprintf(srcPortStr, "%c", srcPort);
-    // printf("src port: %x, src port str: %x\n", srcPort, srcPortStr);
-    // unsigned char dstPortStr[3];
-    // sprintf(dstPortStr, "%c", dstPort);
-    // printf("dst port: %x, dst port str: %x\n", dstPort, dstPortStr);
-
+    // Populate the RHP message byte by byte
     new_message[0] = version;
     new_message[1] = srcPort&0x00FF;
     new_message[2] = (srcPort&0xFF00)>>8;
@@ -43,54 +36,22 @@ unsigned char* construct_RHP_message(char version, int srcPort, int dstPort, cha
     new_message[5] = length&0xFF;
     new_message[6] = (type<<4) + ((length&0xF00)>>8);
     int start = 7;
-    if(buffer_length==1){
+    if(buffer_length==1){   // Add buffer if needed
         new_message[7] = 0;
         start++;
     }
     int i;
-    for(i = start; i < start + length; i++){
+    for(i = start; i < start + length; i++){    // loop to populate payload field
         new_message[i] = message[i-start];
     }
-    // new_message[i] = 0x00;
-    // char *message_pointer;
-    // message_pointer = new_message;
-    // Copy each input to the new message
-    // *message_pointer = version;
-    // message_pointer += 1;
-    // srcPortStr = (char[2]) srcPort;
-    // strcpy(message_pointer, srcPortStr);
-    // *message_pointer = srcPort&0x00FF;
-    // message_pointer += 1;
-    // *message_pointer = (srcPort&0xFF00)>>8;
-    // message_pointer += 1;
-    // dstPortStr = (char[2]) dstPort;
-    // strcpy(message_pointer, dstPortStr);
-    // *message_pointer = dstPort&0x00FF;
-    // message_pointer += 1;
-    // *message_pointer = (dstPort&0xFF00)>>8;
-    // message_pointer += 1;
-    // *message_pointer = length&0xFF;
-    // message_pointer += 1;
-    // *message_pointer = (type<<4) + ((length&0xF00)>>8);
-    // message_pointer += 1;
-    // if(buffer_length==1){
-    //     *message_pointer = 00000000;
-    //     message_pointer += 1;
-    // }
-    // strcpy(message_pointer, message);
-    // message_pointer += length; 
-    // strcpy(message_pointer, checksum);
-
+    
     checksum = compute_checksum(new_message, 9+length+buffer_length);
     new_message[i] = (checksum & 0xFF00) >> 8;
     new_message[i+1] = checksum & 0x00FF;
-    // printf("Checksum: %x %x, %x\n", (checksum & 0xFF00) >> 8, checksum & 0x00FF, checksum);
-    // free(checksum);
-    // printf("%s\n", message);
-    // printf("%s\n", new_message);
     return new_message;
 }
 
+// Function to compute checksum
 uint16_t compute_checksum(unsigned char* data, int data_length){
     uint32_t total;    // Running sum
     uint16_t cur;      // variable for current 2 bytes
@@ -99,19 +60,12 @@ uint16_t compute_checksum(unsigned char* data, int data_length){
     for(int i = 0; i < data_length; i+=2){
         uint16_t cur = ((uint8_t) data[i]<<8);
         cur |= (uint8_t) data[i+1];     // Gather current 2 bytes
-        // printf("cur: %x\n", cur);    // debug
         total += cur;                   // Add current 2 bytes to running total
         if(total>0x00FFFF){             // handle overflow
             total = total - 0x10000 + 0x1;
         }
-        // printf("Running total: %x\n", total); // debug
     }
     total = ~(total)&0xFFFF;                // Invert total and mask          
-    // printf("Final total: %x\n", total);  // debug
-    // unsigned char *output = malloc(5);               // output as a pointer to characters
-    // *output=0;
-    // sprintf(output, "%x", total);
-    // printf("Output: %x\n", *output);     // debug
     return (uint16_t) total;
 }
 
@@ -153,17 +107,15 @@ int main() {
     
     // RHP_message = construct_RHP_message(12, 0x1874, 0x6C65, 0, "RHP message received (missing buffer)");
     RHP_message = construct_RHP_message(12, 3044, 0x1874, 0, MESSAGE);
-    int payload_length = (RHP_message[5]+((RHP_message[6]&0x0F)<<8));
+    int payload_length = (RHP_message[5]+((RHP_message[6]&0x0F)<<8));   // calculate payload length
     int message_length;
     if((payload_length%2)==0){
         message_length = payload_length + 10;
     }
     else{
         message_length = payload_length + 9;
-    }
+    }                                                                   // calculate message length
     
-    // printf("Message Length: %d\n", message_length);              // debug
-    // printf("%d\n%d\n",RHP_message[5], (RHP_message[6]&0x0F));    // debug
     // print_hex_and_text(RHP_message, message_length);   // debug
     printf("Sending RHP message: %s\n", MESSAGE);
     for(int i = 0; i<10; i++){
@@ -184,12 +136,12 @@ int main() {
     }
     free(RHP_message);
     // print_hex_and_text(buffer, nBytes); // debug
-    parse_RHP_message(buffer, nBytes);
-    //printf("Received from server: %c\n", hex_message);
+    parse_RHP_message(buffer, nBytes);      // print parsed output
     close(clientSocket);
     return 0;
 }
 
+// Function that prints entire PDU for the layer in hex and ascii
 void print_hex_and_text(unsigned char* buffer, int nBytes){
     printf("This is the hex: ");
     for (int i = 0; i < nBytes; i++) {
@@ -205,6 +157,8 @@ void print_hex_and_text(unsigned char* buffer, int nBytes){
     printf("\n\n");
 }
 
+
+// Parses and prints the received message and metadata
 void parse_RHP_message(unsigned char* buffer, int nBytes){
     int start;
     printf("Message received: ");
