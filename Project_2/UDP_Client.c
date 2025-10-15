@@ -9,21 +9,40 @@
 #include <stdlib.h>
 
 #define SERVER "137.112.38.47"
-#define MESSAGE "hello"
 #define PORT 2526
 #define BUFSIZE 1024
 unsigned char* RHP_message;
+int clientSocket;
+struct sockaddr_in clientAddr, serverAddr;
+
+// Function Declarations
+unsigned char* construct_RHP_message(char, int, char, char*);
+unsigned char* construct_RHMP_message(uint16_t, uint8_t, char*);
 uint16_t compute_checksum(unsigned char*, int);
 void print_hex_and_text(unsigned char*, int);
 void parse_RHP_message(unsigned char*, int);
+void parse_RHMP_message(unsigned char*, int);
+void send_RHP_message(unsigned char*);
 
 
-unsigned char* construct_RHP_message(char version, int srcPort, int dstPort, char type, char message[]) {
+
+// Constructs an RHP message
+unsigned char* construct_RHP_message(char version, int srcPort, char type, char message[]) {
     unsigned char length = strlen(message)+1;
     // Allocate appropriate space
     int buffer_length = 0;
     if ((length%2)==0){//even number of octets in message, add a buffer
         buffer_length = 1;
+    }
+    int dstPort;
+    if (type==0){
+        dstPort = 0x1874;
+    }
+    else if (type==4){
+        dstPort = 0xECE;
+    }
+    else{
+        dstPort = 0;
     }
     uint16_t checksum;
     unsigned char *new_message = malloc(9+length+buffer_length+1);
@@ -51,6 +70,36 @@ unsigned char* construct_RHP_message(char version, int srcPort, int dstPort, cha
     return new_message;
 }
 
+// Constructs an RHMP message
+unsigned char* construct_RHMP_message(uint16_t commID, uint8_t type, char message[]){
+    unsigned char length;
+    if (type==6){
+        length = strlen(message);
+    }
+    else if (type==24){
+        length = 4;
+    }
+    
+    // Allocate appropriate space
+    unsigned char *new_message = malloc(4+length);
+    // Populate the RHP message byte by byte
+    new_message[0] = 0x12;
+    new_message[1] = ((type&0x3)<<6) + 0x3;
+    new_message[2] = ((type&0x3C)>>2)+((length&0xF)<<4);
+    new_message[3] = ((length&0xFF0)>>4);
+
+    // int start = 7;
+    // if(buffer_length==1){   // Add buffer if needed
+    //     new_message[7] = 0;
+    //     start++;
+    // }
+    // int i;
+    // for(i = start; i < start + length; i++){    // loop to populate payload field
+    //     new_message[i] = message[i-start];
+    // }
+    return new_message;
+}
+
 // Function to compute checksum
 uint16_t compute_checksum(unsigned char* data, int data_length){
     uint32_t total;    // Running sum
@@ -69,11 +118,109 @@ uint16_t compute_checksum(unsigned char* data, int data_length){
     return (uint16_t) total;
 }
 
-int main() {
-    int clientSocket, nBytes;
-    unsigned char buffer[BUFSIZE];
-    struct sockaddr_in clientAddr, serverAddr;
+// Debugging function that prints entire PDU for the layer in hex and ascii
+void print_hex_and_text(unsigned char* buffer, int nBytes){
+    printf("This is the hex: ");
+    for (int i = 0; i < nBytes; i++) {
+        unsigned char c = buffer[i];
+        printf("%02X ", c);         // hex
+    }
+    printf("   \n\n");
+    printf("This is the message: ");
+    for (int i = 0; i < nBytes; i++) {
+        unsigned char c = buffer[i];
+        printf("%c", (c >= 32 && c <= 126) ? c : '.'); // ASCII printable or dot
+    }
+    printf("\n\n");
+}
 
+// Parses and prints the received message and metadata
+void parse_RHP_message(unsigned char* buffer, int nBytes){
+    int start;
+    printf("Message received: \n");
+    int length = ((buffer[6]&0x0F)<<8)+(buffer[5]);
+    if ((length%2)==0){//even number of octets in message, there is a buffer
+        start = 8;
+    }   
+    else{
+        start = 7;
+    }
+
+    printf("RHP version: %d\n", buffer[0]);
+    printf("RHP type: %d\n", ((buffer[6]&0xF0)>>4));
+    printf("RHP payload length: %d\n", length);
+    printf("checksum: 0x%02X%02X\n", (unsigned char) buffer[start+length], (unsigned char) buffer[start+length+1]);
+    printf("Source Port: %d (0x%X%X)\n", ((buffer[2]<<8)+buffer[1]), buffer[2], buffer[1]);
+    printf("Destination Port: %d (0x%X%X)\n", ((buffer[4]<<8)+buffer[3]), buffer[4], buffer[3]);
+    if(((buffer[6]&0xF0)>>4)==4){  // check type
+        // RHMP message
+        parse_RHMP_message(buffer+start, length);
+    }   
+    else {
+        // Control message
+        printf("RHP message: ");
+        for(int i = start; i<(start+length); i++) {
+            unsigned char c = buffer[i];
+            printf("%c", c);
+        }
+    }
+    printf("\n\n\n");
+}
+
+void parse_RHMP_message(unsigned char* buffer, int nBytes){
+    int type = ((buffer[2]&0XF)<<4)+((buffer[1]&0xF0)>>4);
+    int length = ((buffer[2]&0xF0)>>4)+(buffer[3]<<4);
+    printf("Communication ID: %X\n", ((buffer[1]&0xF)<<8)+buffer[0]);
+    printf("RHMP type: %d\n", type);
+    printf("RHMP payload length: %d\n", length);
+    printf("RHMP message: ");
+    if(type==6){
+        for(int i = 4; i<(4+length); i++) {
+            unsigned char c = buffer[i];
+            printf("%c", c);
+        }
+    }
+    else if(type==24){
+        printf("%d", buffer[4]+(buffer[5]<<8)+(buffer[6]<<16)+(buffer[7]<<24));
+    }
+}
+
+// Handles the sending of the constucted RHP message
+void send_RHP_message(unsigned char* RHP_message){
+    int nBytes;
+    unsigned char buffer[BUFSIZE];
+    int payload_length = (RHP_message[5]+((RHP_message[6]&0x0F)<<8));   // calculate payload length
+    int message_length;
+    if((payload_length%2)==0){
+        message_length = payload_length + 10;
+    }
+    else{
+        message_length = payload_length + 9;
+    }                                                                   // calculate message length
+    
+    // print_hex_and_text(RHP_message, message_length);   // debug
+    for(int i = 0; i<10; i++){
+        /* send a message to the server */
+        if (sendto(clientSocket, RHP_message, message_length, 0, (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
+            perror("sendto failed");
+            return;
+        }
+        /* Receive message from server */
+        nBytes = recvfrom(clientSocket, buffer, BUFSIZE, 0, NULL, NULL);
+        if(compute_checksum(buffer, nBytes)==0){
+            printf("Checksum passed.\n");
+            break;
+        }
+        else{
+            printf("Checksum failed, resending message...\n");
+        }
+    }
+    free(RHP_message);
+    // print_hex_and_text(buffer, nBytes); // debug
+    parse_RHP_message(buffer, nBytes);      // print parsed output
+}
+
+int main() {
     /*Create UDP socket*/
     if ((clientSocket = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("cannot create socket");
@@ -106,79 +253,13 @@ int main() {
 
     
     // RHP_message = construct_RHP_message(12, 0x1874, 0x6C65, 0, "RHP message received (missing buffer)");
-    RHP_message = construct_RHP_message(12, 3044, 0x1874, 0, MESSAGE);
-    int payload_length = (RHP_message[5]+((RHP_message[6]&0x0F)<<8));   // calculate payload length
-    int message_length;
-    if((payload_length%2)==0){
-        message_length = payload_length + 10;
-    }
-    else{
-        message_length = payload_length + 9;
-    }                                                                   // calculate message length
-    
-    // print_hex_and_text(RHP_message, message_length);   // debug
-    printf("Sending RHP message: %s\n", MESSAGE);
-    for(int i = 0; i<10; i++){
-        /* send a message to the server */
-        if (sendto(clientSocket, RHP_message, message_length, 0, (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
-            perror("sendto failed");
-            return 0;
-        }
-        /* Receive message from server */
-        nBytes = recvfrom(clientSocket, buffer, BUFSIZE, 0, NULL, NULL);
-        if(compute_checksum(buffer, nBytes)==0){
-            printf("Checksum passed.\n");
-            break;
-        }
-        else{
-            printf("Checksum failed, resending message...\n");
-        }
-    }
-    free(RHP_message);
-    // print_hex_and_text(buffer, nBytes); // debug
-    parse_RHP_message(buffer, nBytes);      // print parsed output
+    RHP_message = construct_RHP_message(12, 3044, 0, "hi");
+    printf("Sending RHP message: hi\n");
+    send_RHP_message(RHP_message);
+
+    RHP_message = construct_RHP_message(12, 3044, 0, "hello");
+    printf("Sending RHP message: hello\n");
+    send_RHP_message(RHP_message);
     close(clientSocket);
     return 0;
-}
-
-// Function that prints entire PDU for the layer in hex and ascii
-void print_hex_and_text(unsigned char* buffer, int nBytes){
-    printf("This is the hex: ");
-    for (int i = 0; i < nBytes; i++) {
-        unsigned char c = buffer[i];
-        printf("%02X ", c);         // hex
-    }
-    printf("   \n\n");
-    printf("This is the message: ");
-    for (int i = 0; i < nBytes; i++) {
-        unsigned char c = buffer[i];
-        printf("%c", (c >= 32 && c <= 126) ? c : '.'); // ASCII printable or dot
-    }
-    printf("\n\n");
-}
-
-
-// Parses and prints the received message and metadata
-void parse_RHP_message(unsigned char* buffer, int nBytes){
-    int start;
-    printf("Message received: ");
-    int length = ((buffer[6]&0x0F)<<8)+(buffer[5]);
-    if ((length%2)==0){//even number of octets in message, there is a buffer
-        start = 8;
-    }   
-    else{
-        start = 7;
-    }
-    int i;
-    for(i = start; i<(start+length); i++) {
-        unsigned char c = buffer[i];
-        printf("%c", c);
-    }
-    printf("\nRHP version: %d\n", buffer[0]);
-    printf("RHP type: %d\n", ((buffer[6]&0xF0)>>4));
-    // printf("Communication ID: %d\n", buffer[0]);
-    printf("length: %d\n", length);
-    printf("checksum: 0x%02X%02X\n", (unsigned char) buffer[i], (unsigned char) buffer[i+1]);
-    printf("Source Port: 0x%X%X\n", buffer[2], buffer[1]);
-    printf("Destination Port: 0x%X%X\n", buffer[4], buffer[3]);
 }
