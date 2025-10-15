@@ -11,13 +11,12 @@
 #define SERVER "137.112.38.47"
 #define PORT 2526
 #define BUFSIZE 1024
-unsigned char* RHP_message;
 int clientSocket;
 struct sockaddr_in clientAddr, serverAddr;
 
 // Function Declarations
 unsigned char* construct_RHP_message(char, int, char, char*);
-unsigned char* construct_RHMP_message(uint16_t, uint8_t, char*);
+unsigned char* construct_RHMP_message(int, char*);
 uint16_t compute_checksum(unsigned char*, int);
 void print_hex_and_text(unsigned char*, int);
 void parse_RHP_message(unsigned char*, int);
@@ -71,7 +70,7 @@ unsigned char* construct_RHP_message(char version, int srcPort, char type, char 
 }
 
 // Constructs an RHMP message
-unsigned char* construct_RHMP_message(uint16_t commID, uint8_t type, char message[]){
+unsigned char* construct_RHMP_message(int type, char message[]){
     unsigned char length;
     if (type==6){
         length = strlen(message);
@@ -215,7 +214,6 @@ void send_RHP_message(unsigned char* RHP_message){
             printf("Checksum failed, resending message...\n");
         }
     }
-    free(RHP_message);
     // print_hex_and_text(buffer, nBytes); // debug
     parse_RHP_message(buffer, nBytes);      // print parsed output
 }
@@ -251,15 +249,34 @@ int main() {
     serverAddr.sin_addr.s_addr = inet_addr(SERVER);
     memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);
 
-    
+    unsigned char* RHMP_message;
+    unsigned char* RHP_message;
     // RHP_message = construct_RHP_message(12, 0x1874, 0x6C65, 0, "RHP message received (missing buffer)");
+
     RHP_message = construct_RHP_message(12, 3044, 0, "hi");
     printf("Sending RHP message: hi\n");
     send_RHP_message(RHP_message);
+    free(RHP_message);
 
     RHP_message = construct_RHP_message(12, 3044, 0, "hello");
     printf("Sending RHP message: hello\n");
     send_RHP_message(RHP_message);
+    free(RHP_message);
+
+    RHMP_message = construct_RHMP_message(4, 0);
+    RHP_message = construct_RHP_message(12, 3044, 4, RHMP_message);
+    printf("Sending RHMP message: Message_Request\n");
+    send_RHP_message(RHP_message);
+    free(RHP_message);
+    free(RHMP_message);
+
+    RHMP_message = construct_RHMP_message(16, 0);
+    RHP_message = construct_RHP_message(12, 3044, 4, RHMP_message);
+    printf("Sending RHMP message: ID_Request\n");
+    send_RHP_message(RHP_message);
+    free(RHP_message);
+    free(RHMP_message);
+
     close(clientSocket);
     return 0;
 }
