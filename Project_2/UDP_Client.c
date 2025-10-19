@@ -1,4 +1,10 @@
-/************* UDP CLIENT CODE *******************/
+// ---------------------------------------------------------------------------------------
+//  Eric Steuber and JJ Moe
+//  ECE312
+//  Project 2
+//
+//  Description: Defines methods to send and receive custom RHP and RHMP protocol messages
+// ---------------------------------------------------------------------------------------
 
 #include <stdio.h>
 #include <sys/socket.h>
@@ -87,15 +93,6 @@ unsigned char* construct_RHMP_message(int type, char message[]){
     new_message[2] = ((type&0x3C)>>2)+((length&0xF)<<4);
     new_message[3] = ((length&0xFF0)>>4);
 
-    // int start = 7;
-    // if(buffer_length==1){   // Add buffer if needed
-    //     new_message[7] = 0;
-    //     start++;
-    // }
-    // int i;
-    // for(i = start; i < start + length; i++){    // loop to populate payload field
-    //     new_message[i] = message[i-start];
-    // }
     return new_message;
 }
 
@@ -149,7 +146,7 @@ void parse_RHP_message(unsigned char* buffer, int nBytes){
     printf("RHP type: %d\n", ((buffer[6]&0xF0)>>4));
     printf("RHP payload length: %d\n", length);
     printf("checksum: 0x%02X%02X\n", (unsigned char) buffer[start+length], (unsigned char) buffer[start+length+1]);
-    printf("Source Port: %d (0x%X%X)\n", ((buffer[2]<<8)+buffer[1]), buffer[2], buffer[1]); // Something is off here...
+    printf("Source Port: %d (0x%X%X)\n", ((buffer[2]<<8)+buffer[1]), buffer[2], buffer[1]); 
     printf("Destination Port: %d (0x%X%X)\n", ((buffer[4]<<8)+buffer[3]), buffer[4], buffer[3]);
     if(((buffer[6]&0xF0)>>4)==4){  // check type
         // RHMP message
@@ -163,9 +160,10 @@ void parse_RHP_message(unsigned char* buffer, int nBytes){
             printf("%c", c);
         }
     }
-    printf("\n\n\n");
+    printf("\n");
 }
 
+// Prints the metadata and payload of the RHMP message
 void parse_RHMP_message(unsigned char* buffer, int nBytes){
     int type = ((buffer[2]&0XF)<<2)+((buffer[1]&0xC0)>>6);
     int length = ((buffer[2]&0xF0)>>4)+(buffer[3]<<4);
@@ -173,18 +171,19 @@ void parse_RHMP_message(unsigned char* buffer, int nBytes){
     printf("RHMP type: %d\n", type);
     printf("RHMP payload length: %d\n", length);
     printf("RHMP message: ");
-    if(type==6){
+    if(type==6){        // Prints the Message Response
         for(int i = 4; i<(4+length); i++) {
             unsigned char c = buffer[i];
             printf("%c", c);
         }
     }
-    else if(type==24){
-        printf("%d", buffer[4]+(buffer[5]<<8)+(buffer[6]<<16)+(buffer[7]<<24));
+    else if(type==24){  // Prints the ID Response
+        printf("%d (0x%X%X%X%X)", buffer[4]+(buffer[5]<<8)+(buffer[6]<<16)+(buffer[7]<<24), 
+        buffer[7],buffer[6],buffer[5],buffer[4]);
     }
 }
 
-// Handles the sending of the constucted RHP message
+// Handles the sending of the constructed RHP message
 void send_RHP_message(unsigned char* RHP_message){
     int nBytes;
     unsigned char buffer[BUFSIZE];
@@ -197,7 +196,6 @@ void send_RHP_message(unsigned char* RHP_message){
         message_length = payload_length + 9;
     }                                                                   // calculate message length
     
-    // print_hex_and_text(RHP_message, message_length);   // debug
     for(int i = 0; i<10; i++){  // Tries 10 times then gives up
         /* send a message to the server */
         if (sendto(clientSocket, RHP_message, message_length, 0, (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
@@ -206,16 +204,15 @@ void send_RHP_message(unsigned char* RHP_message){
         }
         /* Receive message from server */
         nBytes = recvfrom(clientSocket, buffer, BUFSIZE, 0, NULL, NULL);
+        parse_RHP_message(buffer, nBytes);      // print parsed output
         if(compute_checksum(buffer, nBytes)==0){
-            printf("Checksum passed.\n");
+            printf("Checksum passed.\n\n\n");
             break;
         }
         else{
-            printf("Checksum failed, resending message...\n");
+            printf("Checksum failed, resending message...\n\n\n");
         }
     }
-    // print_hex_and_text(buffer, nBytes); // debug
-    parse_RHP_message(buffer, nBytes);      // print parsed output
 }
 
 int main() {
@@ -251,30 +248,28 @@ int main() {
 
     unsigned char* RHMP_message;
     unsigned char* RHP_message;
-    // RHP_message = construct_RHP_message(12, 0x1874, 0x6C65, 0, "RHP message received (missing buffer)");
-
+    
     RHP_message = construct_RHP_message(12, 3044, 0, "hi");
     printf("Sending RHP message: hi\n");
     send_RHP_message(RHP_message);
-    free(RHP_message);
 
+    // Send RHP
     RHP_message = construct_RHP_message(12, 3044, 0, "hello");
     printf("Sending RHP message: hello\n");
     send_RHP_message(RHP_message);
-    free(RHP_message);
 
+    // Send RHMP Message Request
     RHMP_message = construct_RHMP_message(4, 0);
     RHP_message = construct_RHP_message(12, 3044, 4, RHMP_message);
     printf("Sending RHMP message: Message_Request\n");
     send_RHP_message(RHP_message);
-    free(RHMP_message);
-    free(RHP_message);
     
-
+    // Send RHMP ID Request
     RHMP_message = construct_RHMP_message(16, 0);
     RHP_message = construct_RHP_message(12, 3044, 4, RHMP_message);
     printf("Sending RHMP message: ID_Request\n");
     send_RHP_message(RHP_message);
+
     free(RHMP_message);
     free(RHP_message);
 
