@@ -151,10 +151,6 @@ void parse_RHP_message(unsigned char* buffer, int nBytes){
     printf("checksum: 0x%02X%02X\n", (unsigned char) buffer[start+length], (unsigned char) buffer[start+length+1]);
     printf("Source Port: %d (0x%X%X)\n", ((buffer[2]<<8)+buffer[1]), buffer[2], buffer[1]); // Something is off here...
     printf("Destination Port: %d (0x%X%X)\n", ((buffer[4]<<8)+buffer[3]), buffer[4], buffer[3]);
-    printf("buffer 0: %x\n",(buffer[0]));
-    printf("buffer 1: %x\n",(buffer[1]));
-    printf("buffer 2: %x\n",(buffer[2]));
-    printf("buffer 3: %x\n",(buffer[3]));
     if(((buffer[6]&0xF0)>>4)==4){  // check type
         // RHMP message
         parse_RHMP_message(buffer+start, length);
@@ -171,7 +167,7 @@ void parse_RHP_message(unsigned char* buffer, int nBytes){
 }
 
 void parse_RHMP_message(unsigned char* buffer, int nBytes){
-    int type = ((buffer[2]&0XF)<<4)+((buffer[1]&0xC0)>>4);
+    int type = ((buffer[2]&0XF)<<2)+((buffer[1]&0xC0)>>6);
     int length = ((buffer[2]&0xF0)>>4)+(buffer[3]<<4);
     printf("Communication ID: %X\n", ((buffer[1]&0xF)<<8)+buffer[0]);
     printf("RHMP type: %d\n", type);
@@ -202,7 +198,7 @@ void send_RHP_message(unsigned char* RHP_message){
     }                                                                   // calculate message length
     
     // print_hex_and_text(RHP_message, message_length);   // debug
-    for(int i = 0; i<10; i++){
+    for(int i = 0; i<10; i++){  // Tries 10 times then gives up
         /* send a message to the server */
         if (sendto(clientSocket, RHP_message, message_length, 0, (struct sockaddr *) &serverAddr, sizeof (serverAddr)) < 0) {
             perror("sendto failed");
@@ -260,28 +256,28 @@ int main() {
     RHP_message = construct_RHP_message(12, 3044, 0, "hi");
     printf("Sending RHP message: hi\n");
     send_RHP_message(RHP_message);
-    // free(RHP_message);
+    free(RHP_message);
 
     RHP_message = construct_RHP_message(12, 3044, 0, "hello");
     printf("Sending RHP message: hello\n");
     send_RHP_message(RHP_message);
-    // free(RHP_message);
+    free(RHP_message);
 
     RHMP_message = construct_RHMP_message(4, 0);
     RHP_message = construct_RHP_message(12, 3044, 4, RHMP_message);
-    print_hex_and_text(RHP_message, 100);
     printf("Sending RHMP message: Message_Request\n");
     send_RHP_message(RHP_message);
-    // free(RHP_message);
-    // free(RHMP_message);
+    free(RHMP_message);
+    free(RHP_message);
+    
 
     RHMP_message = construct_RHMP_message(16, 0);
     RHP_message = construct_RHP_message(12, 3044, 4, RHMP_message);
-    print_hex_and_text(RHP_message, 100);
     printf("Sending RHMP message: ID_Request\n");
     send_RHP_message(RHP_message);
-    // free(RHP_message);
-    // free(RHMP_message);
+    free(RHMP_message);
+    free(RHP_message);
+
 
     close(clientSocket);
     return 0;
